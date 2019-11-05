@@ -19,17 +19,20 @@ def initialize_ann(n,env):
         ann[i].partial_fit(np.array([env.observation_space.sample()]),np.array([env.action_space.sample()]),classes=np.arange(env.action_space.n))
     return ann
 
-def predict_step(env, ann, prev_action, repeated_action, render):
+def predict_step(env, ann, prev_action, prev_observation, repeated_action, render):
     """
     Recursive function that predicts the next action for the ANN to do to balance the pole in the CartPole-environment.
     :param env: The CartPole environment.
     :param ann: The artificial neural network to be used for predicting next action.
     :param prev_action: The previous action taken, used to check for more than 5 repeated actions.
+    :param prev_observation: The previous observation, to be used in the partial fit at the start of the function.
     :param repeated_action: How many times the previous action has been repeated. 
     :param render: Boolean value, for whether or not to render environment.
     :return: Reward 
     """
-    
+    #if prev_observation is not None:
+    #    ann.partial_fit(np.array([prev_observation]),np.array([prev_action]),classes=np.arange(env.action_space.n))
+
     #performing action from previous step in recursive calls
     observation, reward, done, info = env.step(prev_action)
     if render:
@@ -58,10 +61,8 @@ def predict_step(env, ann, prev_action, repeated_action, render):
         return 0
     #recursive call
     else:
-        #doing a partial fit with observations from previous action and the predicted next action 
-        #ann.partial_fit(np.array([observation]),np.array([action]),classes=np.arange(env.action_space.n))
         #recursive call using the predicted action
-        r_reward = predict_step(env,ann,action,repeated_action, render)
+        r_reward = predict_step(env,ann,action,observation,repeated_action, render)
     #adding reward of this step with rewards in recursive calls
     reward +=r_reward
     return reward
@@ -82,7 +83,7 @@ def simulate_generation(env, anns, render):
         time.sleep(0) #small time delay between each simulation
         env.reset()
         action = env.action_space.sample() #generating random action to start simulation
-        rewards[i]=predict_step(env, x, action, 0, render) #starting recursion and simulation
+        rewards[i]=predict_step(env, x, action, None, 0, render) #starting recursion and simulation
     env.close()
 
 
@@ -180,7 +181,7 @@ def mutation(mut_rate, ann1, ann2):
 
     return None
 
-def f1_crossover_children(env, ann1, ann2, mut_rate):
+def crossover_children(env, ann1, ann2, mut_rate):
     """
     Making two new children ANNs from two parent ANNs by crossover. 
     
@@ -312,7 +313,7 @@ def f1_new_generation(env, anns, rewards, mut_rate):
 
     return child_anns
 
-def f2_new_generation(env, anns, rewards, mut_rate):
+def new_generation(env, anns, rewards, mut_rate):
     """
     f2, same as original, but using 'elitism' to let through the 2 best from last generation.
 
@@ -433,8 +434,8 @@ def ea_ann_simulation(env, n, g, hlayer_size, mut_rate):
 
     ann_compare = np.array([best_ann, last_best_ann, mean_ann])
 
-    print('Best ANN vs ANN with average weights and biases:')
-    rewards, ann_compare = simulate_generation(env, ann_compare, False)
+    print('\nBest ANN vs ANN with average weights and biases:')
+    rewards, ann_compare = simulate_generation(env, ann_compare, True)
 
     return best_ann, last_best_ann, mean_ann
 
@@ -451,3 +452,4 @@ assert mut_rate**2 <= 1
 hlayer_size = 4 #nodes in hidden layer
 
 best_ann, last_best_ann, mean_ann = ea_ann_simulation(env,n,g,hlayer_size,mut_rate)
+
