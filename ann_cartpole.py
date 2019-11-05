@@ -19,20 +19,22 @@ def initialize_ann(n,env):
         ann[i].partial_fit(np.array([env.observation_space.sample()]),np.array([env.action_space.sample()]),classes=np.arange(env.action_space.n))
     return ann
 
-def predict_step(env, ann, prev_action, repeated_action):
+def predict_step(env, ann, prev_action, repeated_action, render):
     """
     Recursive function that predicts the next action for the ANN to do to balance the pole in the CartPole-environment.
     :param env: The CartPole environment.
     :param ann: The artificial neural network to be used for predicting next action.
     :param prev_action: The previous action taken, used to check for more than 5 repeated actions.
     :param repeated_action: How many times the previous action has been repeated. 
+    :param render: Boolean value, for whether or not to render environment.
     :return: Reward 
     """
-    #small time delay to slow down rendering
-    #time.sleep(0.03)
+    
     #performing action from previous step in recursive calls
     observation, reward, done, info = env.step(prev_action)
-    #env.render()
+    if render:
+        time.sleep(0.03) #small time delay to slow down rendering
+        env.render()
 
     #predicting next step
     next_action = ann.predict(observation.reshape(1,-1))
@@ -59,16 +61,17 @@ def predict_step(env, ann, prev_action, repeated_action):
         #doing a partial fit with observations from previous action and the predicted next action 
         #ann.partial_fit(np.array([observation]),np.array([action]),classes=np.arange(env.action_space.n))
         #recursive call using the predicted action
-        r_reward = predict_step(env,ann,action,repeated_action)
+        r_reward = predict_step(env,ann,action,repeated_action, render)
     #adding reward of this step with rewards in recursive calls
     reward +=r_reward
     return reward
 
-def simulate_generation(env, anns):
+def simulate_generation(env, anns, render):
     """
     Runs simulations for one generation of ANNs in the CartPole environment.
     :param env: The CartPole environment to test the ANNs against.
     :param anns: The array of ANNs to be used.
+    :param render: Boolean value, for whether or not to render environment.
     :return: Rewards for the different ANNs, and ANNs
     """
 
@@ -79,7 +82,7 @@ def simulate_generation(env, anns):
         time.sleep(0) #small time delay between each simulation
         env.reset()
         action = env.action_space.sample() #generating random action to start simulation
-        rewards[i]=predict_step(env, x, action, 0) #starting recursion and simulation
+        rewards[i]=predict_step(env, x, action, 0, render) #starting recursion and simulation
     env.close()
 
 
@@ -177,7 +180,7 @@ def mutation(mut_rate, ann1, ann2):
 
     return None
 
-def crossover_children(env, ann1, ann2, mut_rate):
+def f1_crossover_children(env, ann1, ann2, mut_rate):
     """
     Making two new children ANNs from two parent ANNs by crossover. 
     
@@ -233,7 +236,59 @@ def crossover_children(env, ann1, ann2, mut_rate):
 
     return c_ann1, c_ann2
 
-def new_generation(env, anns, rewards, mut_rate):
+def f2_crossover_children(env, ann1, ann2, mut_rate):
+    """
+    Alternative version, dividing on nodes, instead of genes
+    SEEMS WORSE
+
+    Making two new children ANNs from two parent ANNs by crossover. 
+
+    :param env: The CartPole environment.
+    :param ann1: Parent ANN 1.
+    :param ann2: Parent ANN 2.
+    :return: Two child ANNs.
+    """
+
+    #performing possible mutation on parents
+    mutation(mut_rate,ann1,ann2)
+
+    c_ann1 = MLPClassifier(batch_size=1, max_iter=1, solver='sgd', activation='relu', learning_rate='invscaling', hidden_layer_sizes=hlayer_size, random_state=1)
+    c_ann2 = MLPClassifier(batch_size=1, max_iter=1, solver='sgd', activation='relu', learning_rate='invscaling', hidden_layer_sizes=hlayer_size, random_state=1)
+
+    #running partial fit to set up the weight and bias shapes
+    c_ann1.partial_fit(np.array([env.observation_space.sample()]),np.array([env.action_space.sample()]),classes=np.arange(env.action_space.n))
+    c_ann2.partial_fit(np.array([env.observation_space.sample()]),np.array([env.action_space.sample()]),classes=np.arange(env.action_space.n))
+    
+    ridx_w = random.randint(0,3)
+    #assigning weights child ANN 1
+    c_ann1.coefs_[0][:ridx_w] = ann1.coefs_[0][:ridx_w]
+    c_ann1.coefs_[0][ridx_w:] = ann2.coefs_[0][ridx_w:]
+
+    c_ann1.coefs_[1][:ridx_w] = ann1.coefs_[1][:ridx_w]
+    c_ann1.coefs_[1][ridx_w:] = ann2.coefs_[1][ridx_w:]
+
+    #assigning weights child ANN 2
+    c_ann2.coefs_[0][:ridx_w] = ann2.coefs_[0][:ridx_w]
+    c_ann2.coefs_[0][ridx_w:] = ann1.coefs_[0][ridx_w:]
+
+    c_ann2.coefs_[1][:ridx_w] = ann2.coefs_[1][:ridx_w]
+    c_ann2.coefs_[1][ridx_w:] = ann1.coefs_[1][ridx_w:]
+
+    ridx_b = random.randint(0,3)
+
+    #assigning biases child ANN 1
+    c_ann1.intercepts_[0][:ridx_b] = ann1.intercepts_[0][:ridx_b]
+    c_ann1.intercepts_[0][ridx_b:] = ann2.intercepts_[0][ridx_b:]
+    c_ann1.intercepts_[1] = ann1.intercepts_[1] #simply assigning this since there is only 1 value
+    
+    #assigning biases child ANN 2
+    c_ann2.intercepts_[0][:ridx_b] = ann2.intercepts_[0][:ridx_b]
+    c_ann2.intercepts_[0][ridx_b:] = ann1.intercepts_[0][ridx_b:]
+    c_ann2.intercepts_[1] = ann2.intercepts_[1]#simply assigning this since there is only 1 value
+
+    return c_ann1, c_ann2
+
+def f1_new_generation(env, anns, rewards, mut_rate):
     """
     Make a new generation of ANNs.
     :param anns: Array of ANNs from previous generation.
@@ -247,6 +302,43 @@ def new_generation(env, anns, rewards, mut_rate):
     #half of the total number of ANNs since each running of the loop, will give 2 children
     run_n = int((n/2)+0.5) #adding 0.5, rounding and converting to int to avoid any issues with float numbers
     for _ in range(run_n):
+        ann1, ann2 = pick_parent_ANNs(anns,rewards)
+        c_ann1, c_ann2 = crossover_children(env,ann1, ann2, mut_rate)
+        child_anns.append(c_ann1)
+        child_anns.append(c_ann2)
+    
+    #turning list to array
+    child_anns = np.array(child_anns)
+
+    return child_anns
+
+def f2_new_generation(env, anns, rewards, mut_rate):
+    """
+    f2, same as original, but using 'elitism' to let through the 2 best from last generation.
+
+    Make a new generation of ANNs.
+    :param anns: Array of ANNs from previous generation.
+    :param rewards: ANN probabilities based on rewards. 
+    :return: New generation of ANNs made from chosen parent ANNs.
+    """ 
+    #number of ANNs
+    n=len(anns)
+
+    child_anns = []
+
+    #adding the two best ANNs from last generation
+    idx1 = np.argmax(rewards)
+    idx2 = np.argmax(rewards[rewards!=np.max(rewards)])
+    if idx2 >= idx1:
+        idx2 +=1
+    
+    child_anns.append(anns[idx1])
+    child_anns.append(anns[idx2])
+
+    #half of the total number of ANNs since each running of the loop, will give 2 children
+    run_n = int((n/2)+0.5) #adding 0.5, rounding and converting to int to avoid any issues with float numbers
+
+    for _ in range(run_n-1):
         ann1, ann2 = pick_parent_ANNs(anns,rewards)
         c_ann1, c_ann2 = crossover_children(env,ann1, ann2, mut_rate)
         child_anns.append(c_ann1)
@@ -322,10 +414,12 @@ def ea_ann_simulation(env, n, g, hlayer_size, mut_rate):
     for i in range(g):
         print('\nGeneration {}:'.format(i+1))
         #Simulating one generation and storing rewards
-        rewards, annP = simulate_generation(env, ann)
+        rewards, annP = simulate_generation(env, ann, False)
         all_ann.append(annP)
         all_rewards.append(rewards)
         ann = new_generation(env,annP,rewards,mut_rate)
+
+    last_best_ann = ann[np.argmax(rewards)]
 
     reward_max = 0
     max_idx = []
@@ -337,25 +431,23 @@ def ea_ann_simulation(env, n, g, hlayer_size, mut_rate):
     best_ann = all_ann[max_idx[0]][max_idx[1]]
     mean_ann = average_ann(env,all_ann,n,g)
 
-    ann_compare = np.array([best_ann, mean_ann])
+    ann_compare = np.array([best_ann, last_best_ann, mean_ann])
 
     print('Best ANN vs ANN with average weights and biases:')
-    rewards, ann_compare = simulate_generation(env, ann_compare)
+    rewards, ann_compare = simulate_generation(env, ann_compare, False)
 
-    return best_ann, mean_ann
+    return best_ann, last_best_ann, mean_ann
 
 env=gym.make('CartPole-v1') #initializing CartPol environment
+env._max_episode_steps = np.inf
 env.reset()
 
 n=50 #number of ANNs, has to be even number
 assert (n%2)==0
 g=20 #number of generations
-mut_rate = 0.01 #mutation rate, between 0 and 1.
+mut_rate = 0.001 #mutation rate, between 0 and 1.
 assert mut_rate**2 <= 1
 
 hlayer_size = 4 #nodes in hidden layer
 
-best_ann, all_ann = ea_ann_simulation(env,n,g,hlayer_size,mut_rate)
-
-print(best_ann)
-
+best_ann, last_best_ann, mean_ann = ea_ann_simulation(env,n,g,hlayer_size,mut_rate)
