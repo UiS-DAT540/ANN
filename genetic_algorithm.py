@@ -59,13 +59,13 @@ class GA:
         child2.mutate(mutation_rate)
         return child1, child2
 
-    def run(self, max_gen=1000000):
+    def run(self, max_gen):
         self.report_generation_fitness()
         for _ in range(max_gen-1):
             self.new_generation()
             self.report_generation_fitness()
-            if self.get_best_n_anns(1)[0].reward == self.max_iter-1:
-                break
+            # if self.get_best_n_anns(1)[0].reward == self.max_iter-1:
+            #     break
         self.plot_timeline()
 
     def report_generation_fitness(self):

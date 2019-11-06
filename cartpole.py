@@ -7,7 +7,9 @@ from genetic_algorithm import GA
 #%%
 # setup
 n = 50 # number of classifiers per generation
-num_gen = 50 # number of generations
+# max number of generations, 
+# usualy doesn't take this long to stop
+num_gen = 20 
 hlayer_size = (4,)
 crossover_method = "uniform"
 # mutation rate [0.1 - 0.001]
