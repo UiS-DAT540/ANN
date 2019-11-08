@@ -64,8 +64,8 @@ class GA:
         for _ in range(max_gen-1):
             self.new_generation()
             self.report_generation_fitness()
-            # if self.get_best_n_anns(1)[0].reward == self.max_iter-1:
-            #     break
+            if self.get_best_n_anns(1)[0].reward == self.max_iter-1:
+                break
         self.plot_timeline()
 
     def report_generation_fitness(self):
@@ -86,7 +86,20 @@ class GA:
         plt.ylabel("score")
         plt.xlabel("generation")
 
-    def render_best(self):
-        self.best_agents[-1].run_simulation(render=True, max_iter=1000)
+    def render_best(self, **kwargs):
+        self.best_agents[-1].run_simulation(render=True, **kwargs)
+
+    def render_average(self, **kwargs):
+        coefs = map(lambda x: x.coefs_, self.population)
+        avg_coef = [sum(map(lambda x: x[i], coefs))/self.n for i in range(2)]
+
+        intercepts = map(lambda x: x.intercepts_, self.population)
+        avg_intercept = [sum(map(lambda x: x[i], intercepts))/self.n for i in range(2)]
+
+        # %%
+        avg_agent = self.best_agents[-1].clone()
+        avg_agent.coefs_ = avg_coef
+        avg_agent.intercepts_ = avg_intercept
+        self.best_agents[-1].run_simulation(render=True, **kwargs)
 
 #%%

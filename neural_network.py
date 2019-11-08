@@ -3,22 +3,22 @@ import numpy as np
 from sklearn.neural_network import MLPClassifier
 import copy
 
-#%%
+
 class ANN(MLPClassifier):
     def __init__(self, env, hidden_layer_sizes=None, **kwargs):
         super().__init__(batch_size=1, max_iter=1, solver='sgd', 
-                        activation='relu', learning_rate='invscaling', 
+                        activation='tanh', learning_rate='invscaling', 
                         random_state=1)
 
         # number of neurons in the hidden layer, if not specified:
-        # 1 layer with 2/3 input layer + 1 for output layer = 3
+        # 1 layer with 2/3 input layer + 1 for output layer = 4
         self.hidden_layer_sizes = hidden_layer_sizes \
             if hidden_layer_sizes \
             else (round((env.observation_space.shape[0] + 1) * 2 / 3) + 1, )
         
         self.partial_fit(
-            # np.array([env.observation_space.sample()]),
-            np.array([env.reset()]),
+            np.array([env.observation_space.sample()]),
+            # np.array([env.reset()]),
             np.array([env.action_space.sample()]), 
             classes=np.arange(env.action_space.n))
         
@@ -26,7 +26,7 @@ class ANN(MLPClassifier):
         self.env = env
         self.__dict__.update(kwargs)
 
-    def run_simulation(self, partial_fit=False, max_repetition=None, max_iter=10000, render=False):
+    def run_simulation(self, partial_fit=False, max_repetition=None, max_iter=1000, render=False):
         next_obs = self.env.reset()
         next_action = None
 
@@ -58,7 +58,7 @@ class ANN(MLPClassifier):
         for row in self.coefs_+self.intercepts_:
             row = self._mutate_arr(row, *args)
             
-    def _mutate_arr(self, arr, mutation_rate=0.1, mag=1):
+    def _mutate_arr(self, arr, mutation_rate=0.1, mag=100):
         shape = arr.shape
         arr = arr.ravel()
 
@@ -66,7 +66,7 @@ class ANN(MLPClassifier):
         # arr[mutation_mask] = 0
         # arr[mutation_mask] = np.random.permutation(arr[mutation_mask])
         # arr[mutation_mask] += np.random.uniform(-1.0, 1.0, len(arr[mutation_mask]))
-        arr[mutation_mask] += np.random.normal(size=len(arr[mutation_mask]))
+        arr[mutation_mask] = np.random.normal(size=len(arr[mutation_mask]))
         # arr[mutation_mask] += np.random.normal(size=len(arr[mutation_mask]))*mag
         return arr.reshape(shape)
 
@@ -74,7 +74,7 @@ class ANN(MLPClassifier):
         for row1, row2 in zip(self.coefs_+self.intercepts_, other.coefs_+other.intercepts_):
             row1, row2 = self._crossover_rows(row1, row2, *args)
 
-    def _crossover_rows(self, row1, row2, crossover_method="test", ravel=True):
+    def _crossover_rows(self, row1, row2, crossover_method="test", ravel=False):
         # setup
         if ravel:
             shape = row1.shape
@@ -87,7 +87,7 @@ class ANN(MLPClassifier):
         if crossover_method == "one-point":
             mask = slice(np.random.randint(length+1))
         elif crossover_method == "two-point":
-            mask = slice(*np.sort(np.random.randint(length, size=2)))
+            mask = slice(*np.sort(np.random.randint(length+1, size=2)))
         elif crossover_method == "uniform":
             mask = np.random.rand(length) < 0.5
         else:
