@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from run import run
 
-# This is not relevant for the project, but it can be included.
+# This is NOT relevant for the project, but it can be included.
 # Set of functions meant to run the genetic algorithm for all 
 # specified configurations, store the results in a dataframe 
 # and save to file. 
@@ -23,16 +23,18 @@ def get_dataframe_with_params():
     crossover_method = ['one-point', 'two-point', 'uniform']
     mutation_method = ['nullify', 'permutate', 'normal', 'uniform']
     mutation_rate = [0.001, 0.01, 0.1, 0.5, 'lambda s: 5/s']
+
     param_collection = {'hlayer_size':hlayer_size, 'activation':activation, 
         'crossover_method':crossover_method, 'mutation_method':mutation_method,
         'mutation_rate':mutation_rate}
+
     # get combinations
     combinations = itertools.product(*param_collection.values())
-    # init dataframe with all combinations
-    df = pd.DataFrame(combinations, columns=param_collection.keys())
-    return df
 
-def save_df_to_file(df, filename="data\\results.csv"):
+    # init and return dataframe with all combinations
+    return pd.DataFrame(combinations, columns=param_collection.keys())
+
+def save_df_to_file(df, filename="results.csv"):
     """ Helper to save the resulting dataframe to file
     
     Arguments:
@@ -45,7 +47,7 @@ def save_df_to_file(df, filename="data\\results.csv"):
     path = os.path.join(os.getcwd(), filename)
     df.to_csv(path)
 
-def read_df_from_file(filename="data\\results.csv"):
+def read_df_from_file(filename="results.csv"):
     """ Helper to read dataframe from file
     
     Keyword Arguments:
@@ -82,14 +84,16 @@ def get_results_for_single_config(series):
     """
     print('Runing genetic algorithm for values:')
     print(series, '\n')
-    ga = run('CartPole-v1', *series.values, max_score=1000)
+    ga = run('CartPole-v1', *series.values, max_score=2000)
     return [[i+1,score[0],score[1]] for i,score in enumerate(ga.fitness_over_time)]
 
 
 
 if __name__ == "__main__":
-    # IT TAKES SOME TIME TO FINISH
     df = get_dataframe_with_params()
+    # uncomment following to start,
+    # time to get coffee, IT WILL TAKE SOME TIME TO FINISH
+
     # df = get_results_for_all_combinations(df)
     # save_df_to_file(df)
 

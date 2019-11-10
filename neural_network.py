@@ -1,7 +1,7 @@
 #%%
 import numpy as np
 from sklearn.neural_network import MLPClassifier
-import copy
+import copy, time
 
 class Entities:
     """ Helper class to store parameters that all our neural networks share
@@ -63,7 +63,7 @@ class ANN(MLPClassifier):
         
         self.partial_fit(
             np.array([self.env.observation_space.sample()]),
-            # np.array([env.reset()]),
+            # np.array([self.env.reset()]),
             np.array([self.env.action_space.sample()]), 
             classes=np.arange(self.env.action_space.n))
         
@@ -123,6 +123,7 @@ class ANN(MLPClassifier):
             #render environment
             if render:
                 self.env.render()
+                time.sleep(0.1)
 
             # change prediction to random if max_repetition is set and reached
             # only do this if reneding is disabled (we are probably training)
