@@ -126,10 +126,10 @@ class GA:
         """
         self.report_generation_fitness()
         for _ in range(1, max_gen):
-            self.new_generation()
-            self.report_generation_fitness()
             if max_score and self.get_best_n_anns(1)[0].reward >= max_score:
                 break
+            self.new_generation()
+            self.report_generation_fitness()
         if plot:
             self.plot_timeline()
 

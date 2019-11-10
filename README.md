@@ -17,5 +17,5 @@ This method can also be used to render the classifier on the screen.
 *extra.py* contains script for running the algorithm with many combinations of configurations and stores the results in  *data/results.csv*
 
 
-## Resuls
+## Results
 

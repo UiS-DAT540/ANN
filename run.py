@@ -80,12 +80,12 @@ if __name__ == "__main__":
 
     # neural network options
     hlayer_size = (1,) # [(1,), (4,)]
-    activation = 'identity' # ['identity', 'logistic', 'tanh', 'relu']
+    activation = 'tanh' # ['identity', 'logistic', 'tanh', 'relu']
 
     # dna options
     crossover_method = 'one-point' # ['one-point', 'two-point', 'uniform']
-    mutation_method = 'nullify' # ['nullify', 'permutate', 'normal', 'uniform']
-    mutation_rate = 0 # [0.001, 0.01, 0.1, 0.5, lambda s: 5/s]
+    mutation_method = 'normal' # ['nullify', 'permutate', 'normal', 'uniform']
+    mutation_rate = lambda s: 5/s # [0.001, 0.01, 0.1, 0.5, lambda s: 5/s]
     
     print('Configuration: ')
     print('Environment name: \t', env_name)
@@ -100,8 +100,6 @@ if __name__ == "__main__":
     
     # run
     ga = run(env_name, hlayer_size, activation, crossover_method, mutation_method, 
-        mutation_rate, population_size, num_gen, True, 1000)
-
-
+        mutation_rate, population_size, num_gen, True, 10000)
 
 # %%
